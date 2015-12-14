@@ -13,6 +13,7 @@ Funelo ensures raw data automatically gets turned into actionable data sets as i
   make
 ```
 
+##### Run tests
 ```shell
 wrk -t2 -c100 -d30s -R10000 http://127.0.0.1:8080/
 ```
