@@ -1,7 +1,10 @@
 package de.zalando.funelo;
 
 import de.zalando.funelo.verticle.FuneloApiGateway;
+import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -14,12 +17,18 @@ import org.junit.runner.RunWith;
 public class FuneloApiGatewayTest {
 
     private final String healthEndpointResponse = "{\"status\":\"UP\"}";
+    private final String ENDPOINTS = "[ { \"path\": \"/v1/myfeed/:eventtype\", \"method\": \"GET\", \"format\": \"JSON\" }, " +
+            "{ \"path\": \"/v1/myads/:eventtype\", \"method\": \"GET\", \"format\": \"JSON\" } ]";
     private Vertx vertx;
 
     @Before
     public void setUp(TestContext context) {
         vertx = Vertx.vertx();
-        vertx.deployVerticle(FuneloApiGateway.class.getName(), context.asyncAssertSuccess());
+        DeploymentOptions deploymentOptions = new DeploymentOptions();
+        JsonObject config = new JsonObject();
+        config.put(ConfigurationOptions.HTTP_ENDPOINTS, new JsonArray(ENDPOINTS));
+        deploymentOptions.setConfig(config);
+        vertx.deployVerticle(FuneloApiGateway.class.getName(), deploymentOptions, context.asyncAssertSuccess());
     }
 
     @After

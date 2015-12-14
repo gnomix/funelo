@@ -2,5 +2,18 @@
   "http.host" : "localhost",
   "http.port" : 8081,
 
-  "kafka.servers" : "localhost:9092"
+  "kafka.servers" : "localhost:9092",
+
+  "http.endpoints": [
+      {
+        "path": "/v1/myfeed/:eventtype",
+        "method": "GET",
+        "format": "JSON"
+      },
+      {
+        "path": "/v1/myads/:eventtype",
+        "method": "GET",
+        "format": "JSON"
+      }
+  ]
 }

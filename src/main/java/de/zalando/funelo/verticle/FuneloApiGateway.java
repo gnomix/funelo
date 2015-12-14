@@ -1,14 +1,16 @@
 package de.zalando.funelo.verticle;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import de.zalando.funelo.ConfigurationOptions;
+import de.zalando.funelo.FuneloException;
 import de.zalando.funelo.domain.Endpoint;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.json.JsonArray;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 
@@ -21,16 +23,14 @@ import de.zalando.funelo.domain.RequestData;
 import de.zalando.funelo.parser.ToJsonParser;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.List;
 
 public class FuneloApiGateway extends AbstractVerticle {
 
     private final Logger logger = LoggerFactory.getLogger(FuneloApiGateway.class);
-    private final String healthEndpointResponse = "{\"status\":\"UP\"}";
 
     @Override
-    public void start(Future<Void> future) {
+    public void start(final Future<Void> future) {
         logger.info("Starting {} Verticle.", FuneloApiGateway.class.getSimpleName());
 
         Router router = Router.router(vertx);
@@ -42,19 +42,22 @@ public class FuneloApiGateway extends AbstractVerticle {
         createHttpServer(router, future);
     }
 
-    private List<Endpoint> parseEndpoints(final String endpointsStr) {
+    private List<Endpoint> parseEndpoints(final String endpoints) {
         final ObjectMapper mapper = new ObjectMapper();
         try {
-            return mapper.readValue(endpointsStr,
+            return mapper.readValue(endpoints,
                     mapper.getTypeFactory().constructCollectionType(List.class, Endpoint.class));
         } catch (IOException e) {
-            logger.error("Endpoints file does not contain a valid JSON object", e);
-            throw new RuntimeException(e);
+            throw new FuneloException("Endpoints file does not contain a valid JSON object", e);
         }
     }
 
     private void createDynamicEndpoints(final Router router) {
-        final List<Endpoint> endpoints = parseEndpoints(config().getString("endpoints"));
+        final JsonArray endpointsConfig = config().getJsonArray(ConfigurationOptions.HTTP_ENDPOINTS);
+        if(endpointsConfig == null) {
+            throw new FuneloException("Endpoints configuration is missing.");
+        }
+        final List<Endpoint> endpoints = parseEndpoints(endpointsConfig.encode());
         endpoints.forEach(endpoint -> createDynamicEndpoint(router, endpoint));
     }
 
@@ -72,7 +75,7 @@ public class FuneloApiGateway extends AbstractVerticle {
     private void createHealthEndpoint(Router router) {
         Handler<RoutingContext> routingContextHandler = routingContext -> {
             HttpServerResponse response = routingContext.response();
-            response.putHeader("content-type", "application/json").end(healthEndpointResponse);
+            response.putHeader("content-type", "application/json").end("{\"status\":\"UP\"}");
         };
 
         router.route("/health").handler(routingContextHandler);
@@ -105,12 +108,12 @@ public class FuneloApiGateway extends AbstractVerticle {
     }
 
     private void createHttpServer(Router router, Future<Void> future) {
-        final int port = config().getInteger("http.port", 8080);
-        final String host = config().getString("http.host", "localhost");
+        final int port = config().getInteger(ConfigurationOptions.HTTP_PORT, 8080);
+        final String host = config().getString(ConfigurationOptions.HTTP_HOST, "localhost");
 
         HttpServer server = vertx.createHttpServer();
         server.requestHandler(router::accept)
-                .listen(port,
+                .listen(port, host,
                         result -> {
                             if (result.succeeded()) {
                                 logger.info("Successfully Started HttpServer on port: {}", port);

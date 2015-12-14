@@ -6,7 +6,8 @@ public class Endpoint {
 
     private String path;
     private HttpMethod method;
-    private String format;
+    private Format format = Format.JSON;
+    private Compression compression = Compression.UNCOMPRESSED;
 
     public Endpoint() {}
 
@@ -18,8 +19,12 @@ public class Endpoint {
         return method;
     }
 
-    public String getFormat() {
+    public Format getFormat() {
         return format;
+    }
+
+    public Compression getCompression() {
+        return compression;
     }
 
     public void setPath(String path) {
@@ -30,8 +35,12 @@ public class Endpoint {
         this.method = method;
     }
 
-    public void setFormat(String format) {
+    public void setFormat(Format format) {
         this.format = format;
+    }
+
+    public void setCompression(Compression compression) {
+        this.compression = compression;
     }
 
     @Override
@@ -39,7 +48,8 @@ public class Endpoint {
         return "Endpoint{" +
                 "path='" + path + '\'' +
                 ", method=" + method +
-                ", format='" + format + '\'' +
+                ", format=" + format +
+                ", compression=" + compression +
                 '}';
     }
 }
