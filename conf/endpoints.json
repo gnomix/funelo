@@ -1,0 +1,12 @@
+[
+    {
+      "path": "/v1/myfeed/:eventtype",
+      "method": "GET",
+      "format": "json"
+    },
+    {
+      "path": "/v1/myads/:eventtype",
+      "method": "GET",
+      "format": "json"
+    }
+]

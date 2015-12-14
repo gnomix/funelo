@@ -2,6 +2,8 @@ package de.zalando.funelo;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import de.zalando.funelo.domain.Endpoint;
 import de.zalando.funelo.verticle.FuneloApiGateway;
 import de.zalando.funelo.verticle.PingPongService;
 import io.vertx.core.DeploymentOptions;
@@ -16,6 +18,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.List;
 import java.util.Scanner;
 
 public class Application {
@@ -25,14 +29,15 @@ public class Application {
 
     public static void main(String[] args) {
 
-        ApplicationParams params = new ApplicationParams();
-        JCommander jCommander = new JCommander(params);
+        final ApplicationParams params = new ApplicationParams();
+        final JCommander jCommander = new JCommander(params);
 
         jCommander.parse(args);
 
-        System.out.println(params.getConf());
+        final JsonObject configObject = readConfig(params.getConf());
+        final String endpoints = readEndpoints(params.getEndpoints());
 
-        JsonObject configObject = readConfig(params.getConf());
+        configObject.put("endpoints", endpoints);
         deploymentOptions.setConfig(configObject);
 
         Vertx vertx = Vertx.vertx();
@@ -45,16 +50,28 @@ public class Application {
     }
 
     private static JsonObject readConfig(final String conf) {
-        if (conf == null) {
-            return null;
+        if (conf != null) {
+            try {
+                String content = new String(Files.readAllBytes(Paths.get(conf)));
+                return new JsonObject(content);
+            } catch (IOException e) {
+                logger.error("-conf option does not point to a file and is not valid JSON: " + conf, e);
+            } catch (DecodeException e) {
+                logger.error("Configuration file " + conf + " does not contain a valid JSON object", e);
+            }
         }
-        try {
-            String content = new String(Files.readAllBytes(Paths.get(conf)));
-            return new JsonObject(content);
-        } catch (IOException e) {
-            logger.error("-conf option does not point to a file and is not valid JSON: " + conf);
-        } catch (DecodeException e) {
-            logger.error("Configuration file " + conf + " does not contain a valid JSON object");
+        return null;
+    }
+
+    private static String readEndpoints(final String conf) {
+        if (conf != null) {
+            try {
+                return new String(Files.readAllBytes(Paths.get(conf)));
+            } catch (IOException e) {
+                logger.error("-conf option does not point to a file and is not valid JSON: " + conf, e);
+            } catch (DecodeException e) {
+                logger.error("Configuration file " + conf + " does not contain a valid JSON object", e);
+            }
         }
         return null;
     }
@@ -64,8 +81,16 @@ public class Application {
                 "conf should reference a text file containing a valid JSON  object")
         private String conf;
 
+        @Parameter(names = "-endpoints", description = "Specifies endpoints configuration that should be provided to the verticle. \n" +
+                "conf should reference a text file containing a valid JSON  object")
+        private String endpoints;
+
         private String getConf() {
             return conf;
+        }
+
+        private String getEndpoints() {
+            return endpoints;
         }
     }
 }

@@ -1,5 +1,7 @@
 package de.zalando.funelo.verticle;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import de.zalando.funelo.domain.Endpoint;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -18,7 +20,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import de.zalando.funelo.domain.RequestData;
 import de.zalando.funelo.parser.ToJsonParser;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class FuneloApiGateway extends AbstractVerticle {
 
@@ -33,8 +37,36 @@ public class FuneloApiGateway extends AbstractVerticle {
 
         createHealthEndpoint(router);
         createHelloEndpoint(router);
-        createHttpServer(router, future);
+        createDynamicEndpoints(router);
 
+        createHttpServer(router, future);
+    }
+
+    private List<Endpoint> parseEndpoints(final String endpointsStr) {
+        final ObjectMapper mapper = new ObjectMapper();
+        try {
+            return mapper.readValue(endpointsStr,
+                    mapper.getTypeFactory().constructCollectionType(List.class, Endpoint.class));
+        } catch (IOException e) {
+            logger.error("Endpoints file does not contain a valid JSON object", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void createDynamicEndpoints(final Router router) {
+        final List<Endpoint> endpoints = parseEndpoints(config().getString("endpoints"));
+        endpoints.forEach(endpoint -> createDynamicEndpoint(router, endpoint));
+    }
+
+    private void createDynamicEndpoint(final Router router, final Endpoint endpoint) {
+        Handler<RoutingContext> routingContextHandler = routingContext -> {
+            logger.debug(routingContext.request().toString());
+            HttpServerResponse response = routingContext.response();
+            response.end();
+        };
+
+        logger.debug("Exposing http endpoint: {}", endpoint.getPath());
+        router.route(endpoint.getMethod(), endpoint.getPath()).handler(routingContextHandler);
     }
 
     private void createHealthEndpoint(Router router) {
