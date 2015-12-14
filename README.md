@@ -14,6 +14,10 @@ Funelo ensures raw data automatically gets turned into actionable data sets as i
   java -jar target/funelo-0.0.1-SNAPSHOT.jar -conf conf/funelo.json
 ```    
 
+##### Hot to test
+```shell
+curl -vvv http://localhost:8081/v1/myfeed/view?creativeId=123456
+```
 
 ### Performance 
 
