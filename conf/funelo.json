@@ -1,6 +1,6 @@
 {
   "http.host" : "localhost",
-  "http.port" : 8080,
+  "http.port" : 8081,
 
   "kafka.servers" : "localhost:9092"
 }
