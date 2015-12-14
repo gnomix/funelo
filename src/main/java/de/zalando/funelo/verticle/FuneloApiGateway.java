@@ -58,6 +58,7 @@ public class FuneloApiGateway extends AbstractVerticle {
 
     private void createHttpServer(Router router, Future<Void> future) {
         final int port = config().getInteger("http.port", 8080);
+        final String host = config().getString("http.host", "localhost");
 
         HttpServer server = vertx.createHttpServer();
         server.requestHandler(router::accept)
