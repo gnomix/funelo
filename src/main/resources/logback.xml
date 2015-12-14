@@ -18,8 +18,8 @@
     </logger>
 
 
-    <!-- By default, the level of the root level is set to WARN -->
-    <root level="WARN">
+    <!-- By default, the level of the root level is set to INFO -->
+    <root level="INFO">
         <appender-ref ref="STDOUT"/>
     </root>
 
