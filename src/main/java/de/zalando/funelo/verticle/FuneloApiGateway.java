@@ -68,7 +68,7 @@ public class FuneloApiGateway extends AbstractVerticle {
             try {
                 final String requestJson = ToJsonParser.parseRequestDataToJson(requestData);
                 logger.debug(requestJson);
-                // TODO use eventbus to publish message into KafkaVerticle.
+                // TODO use eventbus to send point to point message into KafkaVerticle.
             } catch (JsonProcessingException e) {
                 logger.warn("ERROR: cannot parse params and headers to json");
             }
