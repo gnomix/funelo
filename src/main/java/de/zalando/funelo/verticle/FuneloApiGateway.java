@@ -33,7 +33,7 @@ public class FuneloApiGateway extends AbstractVerticle {
     public void start(final Future<Void> future) {
         logger.info("Starting {} Verticle.", FuneloApiGateway.class.getSimpleName());
 
-        Router router = Router.router(vertx);
+        final Router router = Router.router(vertx);
 
         createHealthEndpoint(router);
         createHelloEndpoint(router);
@@ -62,9 +62,18 @@ public class FuneloApiGateway extends AbstractVerticle {
     }
 
     private void createDynamicEndpoint(final Router router, final Endpoint endpoint) {
-        Handler<RoutingContext> routingContextHandler = routingContext -> {
-            logger.debug(routingContext.request().toString());
-            HttpServerResponse response = routingContext.response();
+        final Handler<RoutingContext> routingContextHandler = routingContext -> {
+            final HttpServerRequest request = routingContext.request();
+            final RequestData requestData = new RequestData(request.headers(), request.params(), request.uri(), request.path());
+            try {
+                final String requestJson = ToJsonParser.parseRequestDataToJson(requestData);
+                logger.debug(requestJson);
+                // TODO use eventbus to publish message into KafkaVerticle.
+            } catch (JsonProcessingException e) {
+                logger.warn("ERROR: cannot parse params and headers to json");
+            }
+
+            final HttpServerResponse response = routingContext.response();
             response.end();
         };
 
@@ -72,19 +81,19 @@ public class FuneloApiGateway extends AbstractVerticle {
         router.route(endpoint.getMethod(), endpoint.getPath()).handler(routingContextHandler);
     }
 
-    private void createHealthEndpoint(Router router) {
-        Handler<RoutingContext> routingContextHandler = routingContext -> {
-            HttpServerResponse response = routingContext.response();
+    private void createHealthEndpoint(final Router router) {
+        final Handler<RoutingContext> routingContextHandler = routingContext -> {
+            final HttpServerResponse response = routingContext.response();
             response.putHeader("content-type", "application/json").end("{\"status\":\"UP\"}");
         };
 
         router.route("/health").handler(routingContextHandler);
     }
 
-    private void createHelloEndpoint(Router router) {
-        Handler<RoutingContext> routingContextHandler = routingContext -> {
+    private void createHelloEndpoint(final Router router) {
+        final Handler<RoutingContext> routingContextHandler = routingContext -> {
         	final HttpServerRequest request = routingContext.request();
-            HttpServerResponse response = routingContext.response();
+            final HttpServerResponse response = routingContext.response();
             vertx.eventBus().send("ping-address", "ping!", reply -> {
                 if (reply.succeeded()) {
                     reply.result().body();
@@ -93,25 +102,16 @@ public class FuneloApiGateway extends AbstractVerticle {
                 }
                 response.putHeader("content-type", "text/html").end("Hello World from Java with Vert.x");
             });
-            
-        	final RequestData requestData = new RequestData(request.headers(), request.params(), request.uri(), request.path());
-        	try {
-        		final String requestJson = ToJsonParser.parseRequestDataToJson(requestData);
-        		logger.info(requestJson.toString());
-        		//TODO send requestJson to kafka
-			} catch (JsonProcessingException e) {
-				logger.warn("ERROR: cannot parse params and headers to json");
-			}
         };
 
         router.route("/hello").handler(routingContextHandler);
     }
 
-    private void createHttpServer(Router router, Future<Void> future) {
+    private void createHttpServer(final Router router, final Future<Void> future) {
         final int port = config().getInteger(ConfigurationOptions.HTTP_PORT, 8080);
         final String host = config().getString(ConfigurationOptions.HTTP_HOST, "localhost");
 
-        HttpServer server = vertx.createHttpServer();
+        final HttpServer server = vertx.createHttpServer();
         server.requestHandler(router::accept)
                 .listen(port, host,
                         result -> {

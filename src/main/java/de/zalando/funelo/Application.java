@@ -27,7 +27,7 @@ public class Application {
         final DeploymentOptions deploymentOptions = new DeploymentOptions();
         deploymentOptions.setConfig(config);
 
-        Vertx vertx = Vertx.vertx();
+        final Vertx vertx = Vertx.vertx();
 
         logger.info("Deploying {} Verticle.", FuneloApiGateway.class.getSimpleName());
         vertx.deployVerticle(FuneloApiGateway.class.getCanonicalName(), deploymentOptions);
@@ -46,7 +46,7 @@ public class Application {
 
     private static JsonObject readConfig(final String conf) {
         try {
-            String content = new String(Files.readAllBytes(Paths.get(conf)));
+            final String content = new String(Files.readAllBytes(Paths.get(conf)));
             return new JsonObject(content);
         } catch (IOException e) {
             throw new FuneloException("-conf option does not point to a file and is not valid JSON: " + conf, e);
