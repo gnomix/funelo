@@ -5,12 +5,18 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.http.HttpServer;
+import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+
+import de.zalando.funelo.domain.RequestData;
+import de.zalando.funelo.parser.ToJsonParser;
 
 import java.time.LocalDateTime;
 
@@ -42,6 +48,7 @@ public class FuneloApiGateway extends AbstractVerticle {
 
     private void createHelloEndpoint(Router router) {
         Handler<RoutingContext> routingContextHandler = routingContext -> {
+        	final HttpServerRequest request = routingContext.request();
             HttpServerResponse response = routingContext.response();
             vertx.eventBus().send("ping-address", "ping!", reply -> {
                 if (reply.succeeded()) {
@@ -51,6 +58,15 @@ public class FuneloApiGateway extends AbstractVerticle {
                 }
                 response.putHeader("content-type", "text/html").end("Hello World from Java with Vert.x");
             });
+            
+        	final RequestData requestData = new RequestData(request.headers(), request.params(), request.uri(), request.path());
+        	try {
+        		final String requestJson = ToJsonParser.parseRequestDataToJson(requestData);
+        		logger.info(requestJson.toString());
+        		//TODO send requestJson to kafka
+			} catch (JsonProcessingException e) {
+				logger.warn("ERROR: cannot parse params and headers to json");
+			}
         };
 
         router.route("/hello").handler(routingContextHandler);
