@@ -19,22 +19,14 @@ import java.nio.file.Paths;
 public class Application {
 
     private final static Logger logger = LoggerFactory.getLogger(Application.class);
-    private static DeploymentOptions deploymentOptions = new DeploymentOptions();
 
-    public Application() {
-    }
+    public static void main(final String[] args) {
 
-    public static void main(String[] args) {
+        final ApplicationParams params = readParams(args);
+        final JsonObject config = readConfig(params.getConf());
 
-        ApplicationParams params = new ApplicationParams();
-        JCommander jCommander = new JCommander(params);
-
-        jCommander.parse(args);
-
-        System.out.println(params.getConf());
-
-        JsonObject configObject = readConfig(params.getConf());
-        deploymentOptions.setConfig(configObject);
+        final DeploymentOptions deploymentOptions = new DeploymentOptions();
+        deploymentOptions.setConfig(config);
 
         Vertx vertx = Vertx.vertx();
 
@@ -48,28 +40,35 @@ public class Application {
         vertx.deployVerticle(KafkaProducer.class.getCanonicalName(), deploymentOptions);
     }
 
+    private static ApplicationParams readParams(final String[] args) {
+        final ApplicationParams params = new ApplicationParams();
+        final JCommander jCommander = new JCommander(params);
+
+        jCommander.parse(args);
+        return params;
+    }
+
     private static JsonObject readConfig(final String conf) {
-        if (conf == null) {
-            return null;
-        }
         try {
             String content = new String(Files.readAllBytes(Paths.get(conf)));
             return new JsonObject(content);
         } catch (IOException e) {
-            logger.error("-conf option does not point to a file and is not valid JSON: " + conf);
+            throw new FuneloException("-conf option does not point to a file and is not valid JSON: " + conf, e);
         } catch (DecodeException e) {
-            logger.error("Configuration file " + conf + " does not contain a valid JSON object");
+            throw new FuneloException("Configuration file " + conf + " does not contain a valid JSON object", e);
         }
-        return null;
     }
 
     static class ApplicationParams {
-        @Parameter(names = "-conf", description = "Specifies configuration that should be provided to the verticle. \n" +
-                "conf should reference a text file containing a valid JSON  object")
+        @Parameter(names = "-conf",
+                required = true,
+                description = "Specifies configuration that should be provided to the verticle. \n" +
+                        "conf should reference a text file containing a valid JSON  object")
         private String conf;
 
         private String getConf() {
             return conf;
         }
+
     }
 }

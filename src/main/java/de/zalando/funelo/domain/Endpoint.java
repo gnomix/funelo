@@ -4,12 +4,22 @@ import io.vertx.core.http.HttpMethod;
 
 public class Endpoint {
 
+    private String topic;
     private String path;
     private HttpMethod method;
     private Format format = Format.JSON;
     private Compression compression = Compression.UNCOMPRESSED;
 
-    public Endpoint() {}
+    public Endpoint() {
+    }
+
+    public String getTopic() {
+        return topic;
+    }
+
+    public void setTopic(String topic) {
+        this.topic = topic;
+    }
 
     public String getPath() {
         return path;

@@ -6,11 +6,13 @@
 
   "http.endpoints": [
       {
+        "topic" : "click",
         "path": "/v1/myfeed/:eventtype",
         "method": "GET",
         "format": "JSON"
       },
       {
+        "topic" : "view",
         "path": "/v1/myads/:eventtype",
         "method": "GET",
         "format": "JSON"

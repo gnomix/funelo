@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import de.zalando.funelo.ConfigurationOptions;
 import de.zalando.funelo.FuneloException;
 import de.zalando.funelo.domain.Endpoint;
+import de.zalando.funelo.domain.KafkaRequestData;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -65,10 +66,22 @@ public class FuneloApiGateway extends AbstractVerticle {
         final Handler<RoutingContext> routingContextHandler = routingContext -> {
             final HttpServerRequest request = routingContext.request();
             final RequestData requestData = new RequestData(request.headers(), request.params(), request.uri(), request.path());
+
             try {
                 final String requestJson = ToJsonParser.parseRequestDataToJson(requestData);
                 logger.debug(requestJson);
-                // TODO use eventbus to send point to point message into KafkaVerticle.
+
+                KafkaRequestData kafkaRequestData = new KafkaRequestData(requestJson, endpoint.getTopic());
+                final String kafkaRequestJson = ToJsonParser.parseKafkaRequestDataToJson(kafkaRequestData);
+
+                vertx.eventBus().send("send-to-kafka", kafkaRequestJson, reply -> {
+                    if (reply.succeeded()) {
+                        logger.debug(reply.result().body().toString());
+                    } else {
+                        logger.debug("Failed to save data to Kafka.");
+                    }
+                });
+
             } catch (JsonProcessingException e) {
                 logger.warn("ERROR: cannot parse params and headers to json");
             }
