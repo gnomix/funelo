@@ -19,6 +19,29 @@ Funelo ensures raw data automatically gets turned into actionable data sets as i
 curl -vvv http://localhost:8081/v1/myfeed/view?creativeId=123456
 ```
 
+##### Config sampe
+```json
+{
+  "http.host" : "localhost",
+  "http.port" : 8081,
+
+  "kafka.servers" : "localhost:9092",
+
+  "http.endpoints": [
+      {
+        "path": "/v1/myfeed/:eventtype",
+        "method": "GET",
+        "format": "JSON"
+      },
+      {
+        "path": "/v1/myads/:eventtype",
+        "method": "GET",
+        "format": "JSON"
+      }
+  ]
+}
+```
+
 ### Performance 
 
 ##### Install wrk2
