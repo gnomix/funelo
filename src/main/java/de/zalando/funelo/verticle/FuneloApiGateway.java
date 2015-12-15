@@ -21,6 +21,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 
 import de.zalando.funelo.domain.RequestData;
 import de.zalando.funelo.parser.ToJsonParser;
+import de.zalando.funelo.util.UrlAnalyzer;
 
 import java.io.IOException;
 import java.util.List;
@@ -68,6 +69,7 @@ public class FuneloApiGateway extends AbstractVerticle {
             try {
                 final String requestJson = ToJsonParser.parseRequestDataToJson(requestData);
                 logger.debug(requestJson);
+                final List<String> paramNames = UrlAnalyzer.extractParamNames(request.path());
                 // TODO use eventbus to send point to point message into KafkaVerticle.
             } catch (JsonProcessingException e) {
                 logger.warn("ERROR: cannot parse params and headers to json");
