@@ -6,7 +6,7 @@
 
   "http.endpoints": [
       {
-        "topic" : "click",
+        "topic" : ":eventtypetype",
         "path": "/v1/myfeed/:eventtype",
         "method": "GET",
         "format": "JSON"

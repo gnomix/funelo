@@ -3,7 +3,7 @@ package de.zalando.funelo;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import de.zalando.funelo.verticle.FuneloApiGateway;
-import de.zalando.funelo.verticle.KafkaProducer;
+import de.zalando.funelo.verticle.KafkaVerticle;
 import de.zalando.funelo.verticle.PingPongService;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
@@ -36,8 +36,8 @@ public class Application {
         logger.info("Deploying {} Verticle.", PingPongService.class.getSimpleName());
         vertx.deployVerticle(PingPongService.class.getCanonicalName(), deploymentOptions);
 
-        logger.info("Deploying {} Verticle.", KafkaProducer.class.getSimpleName());
-        vertx.deployVerticle(KafkaProducer.class.getCanonicalName(), deploymentOptions);
+        logger.info("Deploying {} Verticle.", KafkaVerticle.class.getSimpleName());
+        vertx.deployVerticle(KafkaVerticle.class.getCanonicalName(), deploymentOptions);
     }
 
     private static ApplicationParams readParams(final String[] args) {

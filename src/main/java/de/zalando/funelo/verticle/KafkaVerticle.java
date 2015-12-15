@@ -6,21 +6,20 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
 import kafka.admin.AdminUtils;
-import kafka.javaapi.producer.Producer;
-import kafka.producer.KeyedMessage;
-import kafka.producer.ProducerConfig;
 import kafka.utils.ZKStringSerializer$;
 import org.I0Itec.zkclient.ZkClient;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Properties;
 
-public class KafkaProducer extends AbstractVerticle {
+public class KafkaVerticle extends AbstractVerticle {
 
 
-    private final Logger logger = LoggerFactory.getLogger(KafkaProducer.class);
+    private final Logger logger = LoggerFactory.getLogger(KafkaVerticle.class);
 
     @Override
     public void start(Future<Void> future) {
@@ -28,13 +27,11 @@ public class KafkaProducer extends AbstractVerticle {
         String ip = "localhost:2181";
 
         Properties props = new Properties();
-        props.put("metadata.broker.list", "localhost:9092");
-        props.put("serializer.class", "kafka.serializer.StringEncoder");
-        props.put("request.required.acks", "1");
+        props.put("bootstrap.servers", "localhost:9092");
+        props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
 
-        ProducerConfig config = new ProducerConfig(props);
-
-        Producer<String, String> producer = new Producer<String, String>(config);
+        KafkaProducer<String, String> producer = new KafkaProducer<String, String>(props);
 
         EventBus eventBus = vertx.eventBus();
 
@@ -45,16 +42,14 @@ public class KafkaProducer extends AbstractVerticle {
                 KafkaRequestData requestData = FromJsonParser.parseKafkaRequestDataFromJson(message.body().toString());
 
                 if (!AdminUtils.topicExists(zkClient, requestData.getTopicName())) {
-                    AdminUtils.createTopic(zkClient, requestData.getTopicName(), 10, 1, new Properties());
+                    logger.debug("Create kafka topic: " + requestData.getTopicName());
+                    AdminUtils.createTopic(zkClient, requestData.getTopicName(), 1, 1, new Properties());
                 }
 
-                KeyedMessage<String, String> data = new KeyedMessage<>(requestData.getTopicName(), ip, requestData.getMessage());
-                producer.send(data);
+                producer.send(new ProducerRecord<String, String>(requestData.getTopicName(), ip, requestData.getMessage()));
 
             } catch (IOException e) {
                 logger.error("Exception while parsing Kafka request JSON.", e);
-
-                return;
             }
         });
 

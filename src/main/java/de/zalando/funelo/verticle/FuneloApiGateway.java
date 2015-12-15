@@ -1,10 +1,14 @@
 package de.zalando.funelo.verticle;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.zalando.funelo.ConfigurationOptions;
 import de.zalando.funelo.FuneloException;
 import de.zalando.funelo.domain.Endpoint;
 import de.zalando.funelo.domain.KafkaRequestData;
+import de.zalando.funelo.domain.RequestData;
+import de.zalando.funelo.parser.ToJsonParser;
+import de.zalando.funelo.util.UrlAnalyzer;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -14,15 +18,8 @@ import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonArray;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-
-import de.zalando.funelo.domain.RequestData;
-import de.zalando.funelo.parser.ToJsonParser;
-import de.zalando.funelo.util.UrlAnalyzer;
 
 import java.io.IOException;
 import java.util.List;
@@ -68,29 +65,7 @@ public class FuneloApiGateway extends AbstractVerticle {
             final HttpServerRequest request = routingContext.request();
             final RequestData requestData = new RequestData(request.headers(), request.params(), request.uri(), request.path());
 
-            try {
-                final String requestJson = ToJsonParser.parseRequestDataToJson(requestData);
-                logger.debug(requestJson);
-
-                KafkaRequestData kafkaRequestData = new KafkaRequestData(requestJson, endpoint.getTopic());
-                final String kafkaRequestJson = ToJsonParser.parseKafkaRequestDataToJson(kafkaRequestData);
-
-                vertx.eventBus().send("send-to-kafka", kafkaRequestJson, reply -> {
-                    if (reply.succeeded()) {
-                        logger.debug(reply.result().body().toString());
-                    } else {
-                        logger.debug("Failed to save data to Kafka.");
-                    }
-                });
-
-                final List<String> paramNames = UrlAnalyzer.extractParamNames(request.path());
-                // in case of topic name being defined as topicName = "v1_myfeed_:eventtype". 
-                // Pseudo code for topic name creation will be paramNames.foreach((paramName) -> topicName.replace(paramName, request.getParam(paramName)))
-                // TODO use eventbus to send point to point message into KafkaVerticle.
-
-            } catch (JsonProcessingException e) {
-                logger.warn("ERROR: cannot parse params and headers to json");
-            }
+            saveToKafka(requestData, endpoint, request);
 
             final HttpServerResponse response = routingContext.response();
             response.end();
@@ -143,5 +118,38 @@ public class FuneloApiGateway extends AbstractVerticle {
                             }
                         }
                 );
+    }
+
+    private void saveToKafka(RequestData requestData, Endpoint endpoint, HttpServerRequest request) {
+        try {
+            final String requestJson = ToJsonParser.parseRequestDataToJson(requestData);
+            logger.debug(requestJson);
+
+            KafkaRequestData kafkaRequestData = new KafkaRequestData(requestJson, getTopicNameFromParams(endpoint, request));
+            final String kafkaRequestJson = ToJsonParser.parseKafkaRequestDataToJson(kafkaRequestData);
+            logger.info("Kafka Request JSON: " + kafkaRequestJson);
+
+            vertx.eventBus().send("send-to-kafka", kafkaRequestJson, reply -> {
+                if (reply.succeeded()) {
+                    logger.debug(reply.result().body().toString());
+                } else {
+                    logger.debug("Failed to save data to Kafka.");
+                }
+            });
+
+        } catch (JsonProcessingException e) {
+            logger.warn("ERROR: cannot parse params and headers to json");
+        }
+    }
+
+    private String getTopicNameFromParams(Endpoint endpoint, HttpServerRequest request) {
+        List<String> topicVariables = UrlAnalyzer.extractParamNames(endpoint.getPath());
+        String topic = endpoint.getTopic();
+
+        for (String topicVariable : topicVariables) {
+            topic = topic.replace(":" + topicVariable, request.getParam(topicVariable));
+        }
+
+        return topic;
     }
 }
