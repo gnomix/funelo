@@ -3,6 +3,7 @@ package de.zalando.funelo;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import de.zalando.funelo.verticle.FuneloApiGateway;
+import de.zalando.funelo.verticle.KafkaProducer;
 import de.zalando.funelo.verticle.PingPongService;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
@@ -11,17 +12,17 @@ import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Scanner;
 
 public class Application {
 
     private final static Logger logger = LoggerFactory.getLogger(Application.class);
     private static DeploymentOptions deploymentOptions = new DeploymentOptions();
+
+    public Application() {
+    }
 
     public static void main(String[] args) {
 
@@ -42,6 +43,9 @@ public class Application {
 
         logger.info("Deploying {} Verticle.", PingPongService.class.getSimpleName());
         vertx.deployVerticle(PingPongService.class.getCanonicalName(), deploymentOptions);
+
+        logger.info("Deploying {} Verticle.", KafkaProducer.class.getSimpleName());
+        vertx.deployVerticle(KafkaProducer.class.getCanonicalName(), deploymentOptions);
     }
 
     private static JsonObject readConfig(final String conf) {
