@@ -9,7 +9,7 @@
         </layout>
     </appender>
 
-    <logger name="de.zalando.reklame.feedadserver" level="DEBUG" additivity="false">
+    <logger name="de.zalando.funelo" level="DEBUG" additivity="false">
         <appender-ref ref="STDOUT"/>
     </logger>
 
