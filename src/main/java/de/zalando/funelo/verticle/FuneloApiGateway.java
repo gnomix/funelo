@@ -22,6 +22,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 
 import de.zalando.funelo.domain.RequestData;
 import de.zalando.funelo.parser.ToJsonParser;
+import de.zalando.funelo.util.UrlAnalyzer;
 
 import java.io.IOException;
 import java.util.List;
@@ -55,7 +56,7 @@ public class FuneloApiGateway extends AbstractVerticle {
 
     private void createDynamicEndpoints(final Router router) {
         final JsonArray endpointsConfig = config().getJsonArray(ConfigurationOptions.HTTP_ENDPOINTS);
-        if(endpointsConfig == null) {
+        if (endpointsConfig == null) {
             throw new FuneloException("Endpoints configuration is missing.");
         }
         final List<Endpoint> endpoints = parseEndpoints(endpointsConfig.encode());
@@ -82,6 +83,11 @@ public class FuneloApiGateway extends AbstractVerticle {
                     }
                 });
 
+                final List<String> paramNames = UrlAnalyzer.extractParamNames(request.path());
+                // in case of topic name being defined as topicName = "v1_myfeed_:eventtype". 
+                // Pseudo code for topic name creation will be paramNames.foreach((paramName) -> topicName.replace(paramName, request.getParam(paramName)))
+                // TODO use eventbus to send point to point message into KafkaVerticle.
+
             } catch (JsonProcessingException e) {
                 logger.warn("ERROR: cannot parse params and headers to json");
             }
@@ -105,7 +111,7 @@ public class FuneloApiGateway extends AbstractVerticle {
 
     private void createHelloEndpoint(final Router router) {
         final Handler<RoutingContext> routingContextHandler = routingContext -> {
-        	final HttpServerRequest request = routingContext.request();
+            final HttpServerRequest request = routingContext.request();
             final HttpServerResponse response = routingContext.response();
             vertx.eventBus().send("ping-address", "ping!", reply -> {
                 if (reply.succeeded()) {
